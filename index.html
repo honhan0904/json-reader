@@ -31,7 +31,6 @@
                 csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
                 return csv;
             } catch (e) {
-                console.error(e);
                 return "";
             }
         }
@@ -224,12 +223,13 @@
             };
             let currentFilter = 'all';
             let searchQuery = '';
+            let jsonData = [];
 
             // Load JSON and render records
             $('#load-json').click(function() {
                 try {
                     const jsonInput = $('#json-input').val();
-                    const jsonData = JSON.parse(jsonInput);
+                    jsonData = JSON.parse(jsonInput);
 
                     if (!Array.isArray(jsonData)) {
                         showAlert('JSON must be an array of objects.', 'danger');
@@ -248,7 +248,6 @@
             // Handle search input
             $('#search-input').on('input', function() {
                 searchQuery = $(this).val().toLowerCase();
-                const jsonData = JSON.parse($('#json-input').val());
                 renderRecords(jsonData);
             });
 
@@ -259,7 +258,6 @@
                 columnVisibility[column] = isChecked;
 
                 // Re-render records with current visibility
-                const jsonData = JSON.parse($('#json-input').val());
                 renderRecords(jsonData);
                 showAlert(`Column "${column.charAt(0).toUpperCase() + column.slice(1)}" ${isChecked ? 'shown' : 'hidden'}.`, 'info');
             });
@@ -271,7 +269,6 @@
                 $('#filter-paths').text(`Filter: ${$(this).text()}`);
 
                 // Re-render records with current filter
-                const jsonData = JSON.parse($('#json-input').val());
                 renderRecords(jsonData);
                 showAlert(`Filter set to "${$(this).text()}".`, 'info');
             });
@@ -282,13 +279,12 @@
                 const newValue = $(this).text();
 
                 try {
-                    const jsonData = JSON.parse($('#json-input').val());
                     updateNestedData(jsonData, path, isNumeric(newValue) ? Number(newValue) : newValue);
                     $('#json-input').val(JSON.stringify(jsonData, null, 2));
                     renderRecords(jsonData); // Re-render to reflect changes
                     showAlert('JSON updated successfully!', 'success');
                 } catch (e) {
-                    showAlert('Error updating JSON: ' + e.message, 'danger');
+                    showAlert(`Error updating JSON at path "${path}": ${e.message}`, 'danger');
                 }
             });
 
@@ -296,18 +292,22 @@
             $('#save-json').click(function() {
                 try {
                     const jsonInput = $('#json-input').val();
-                    const jsonData = JSON.parse(jsonInput);
-                    $('#output-json').val(JSON.stringify(jsonData, null, 2));
-                    showAlert('JSON saved to output!', 'success');
+                    if (!jsonInput) {
+                        showAlert('No JSON data to save.', 'warning');
+                        return;
+                    }
+                    const parsedJson = JSON.parse(jsonInput);
+                    $('#output-json').val(JSON.stringify(parsedJson, null, 2));
+                    showAlert('JSON saved to output successfully!', 'success');
                 } catch (e) {
                     showAlert('Error saving JSON: ' + e.message, 'danger');
                 }
             });
 
             // Helper function to render records
-            function renderRecords(jsonData) {
+            function renderRecords(data) {
                 $('#json-records').empty();
-                const items = flattenItems(jsonData);
+                const items = flattenItems(data);
 
                 const table = $(`
                     <table class="table table-bordered">
@@ -331,7 +331,7 @@
                     const href = item.href || '';
                     const description = item.description || '';
                     const otherValues = Object.entries(item)
-                        .filter(([key]) => !['title', 'icon', 'href', 'description', 'children'].includes(key))
+                        .filter(([key]) => !['title', 'icon', 'href', 'description', 'children', 'path'].includes(key))
                         .map(([key, value]) => `${key}: ${value}`)
                         .join(', ');
 
@@ -339,7 +339,8 @@
                         title.toLowerCase().includes(searchQuery) ||
                         icon.toLowerCase().includes(searchQuery) ||
                         href.toLowerCase().includes(searchQuery) ||
-                        description.toLowerCase().includes(searchQuery);
+                        description.toLowerCase().includes(searchQuery) ||
+                        otherValues.toLowerCase().includes(searchQuery);
 
                     const matchesFilter = currentFilter === 'all' ||
                         (currentFilter === 'titles' && title) ||
@@ -360,7 +361,7 @@
                             row.append(`<td><span contenteditable="true" data-key="${item.path}.description">${description}</span></td>`);
                         }
                         if (columnVisibility.value) {
-                            row.append(`<td>${otherValues}</td>`);
+                            row.append(`<td><span contenteditable="true" data-key="${item.path}.value">${otherValues}</span></td>`);
                         }
                         tbody.append(row);
                     }
@@ -389,14 +390,40 @@
                 for (let i = 0; i < keys.length - 1; i++) {
                     let key = keys[i];
                     if (key.includes('[')) {
-                        const [arrayKey, index] = key.split(/\[|\]/).filter(Boolean);
-                        current = arrayKey ? current[arrayKey][parseInt(index)] : current[parseInt(index)];
+                        const match = key.match(/(\w+)?\[(\d+)\]/);
+                        if (match) {
+                            const arrayKey = match[1] || '';
+                            const index = parseInt(match[2]);
+                            if (arrayKey) {
+                                if (current[arrayKey] && Array.isArray(current[arrayKey]) && index < current[arrayKey].length) {
+                                    current = current[arrayKey][index];
+                                } else {
+                                    throw new Error(`Invalid path at "${key}": Array does not exist or index out of bounds`);
+                                }
+                            } else {
+                                if (Array.isArray(current) && index < current.length) {
+                                    current = current[index];
+                                } else {
+                                    throw new Error(`Invalid path at "${key}": Index out of bounds or not an array`);
+                                }
+                            }
+                        } else {
+                            throw new Error(`Invalid path format at "${key}"`);
+                        }
                     } else {
-                        current = current[key];
+                        if (current[key] && typeof current[key] === 'object') {
+                            current = current[key];
+                        } else {
+                            throw new Error(`Invalid path at "${key}": Path does not exist or not an object`);
+                        }
                     }
                 }
                 const lastKey = keys[keys.length - 1];
-                current[lastKey] = value;
+                if (current && typeof current === 'object') {
+                    current[lastKey] = value;
+                } else {
+                    throw new Error(`Invalid path: "${lastKey}" does not point to an object`);
+                }
             }
 
             // Helper function to check if a value is numeric

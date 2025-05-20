@@ -124,6 +124,14 @@
             background-color: #2ea44f;
             border-color: #2ea44f;
         }
+        .btn-info {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+        }
+        .btn-info:hover {
+            background-color: #138496;
+            border-color: #138496;
+        }
         .alert {
             margin-top: 10px;
         }
@@ -209,6 +217,50 @@
         <div class="mt-3">
             <label for="output-json" class="form-label">Edited JSON Output:</label>
             <textarea id="output-json" class="form-control" readonly></textarea>
+        </div>
+    </div>
+
+    <!-- Modal để nhập thông tin folder con mới -->
+    <div class="modal fade" id="addFolderModal" tabindex="-1" aria-labelledby="addFolderModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addFolderModalLabel">Thêm Folder Con</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addFolderForm">
+                        <div class="mb-3">
+                            <label for="newFolderTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="newFolderTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newFolderIcon" class="form-label">Icon</label>
+                            <input type="text" class="form-control" id="newFolderIcon" placeholder="e.g., 📁">
+                        </div>
+                        <div class="mb-3">
+                            <label for="newFolderHref" class="form-label">Href</label>
+                            <input type="text" class="form-control" id="newFolderHref">
+                        </div>
+                        <div class="mb-3">
+                            <label for="newFolderDescription" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="newFolderDescription">
+                        </div>
+                        <div class="mb-3">
+                            <label for="newFolderIsFolder" class="form-label">Is Folder?</label>
+                            <select class="form-control" id="newFolderIsFolder">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="parentPath" value="">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" id="saveNewFolder">Lưu Folder Con</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -304,6 +356,36 @@
                 }
             });
 
+            // Handle click on "Thêm Folder Con" button
+            $('#json-records').on('click', '.add-folder-btn', function() {
+                const path = $(this).data('path');
+                $('#parentPath').val(path);
+                $('#addFolderModal').modal('show');
+            });
+
+            // Save new folder
+            $('#saveNewFolder').click(function() {
+                const path = $('#parentPath').val();
+                const newFolder = {
+                    title: $('#newFolderTitle').val(),
+                    icon: $('#newFolderIcon').val() || '',
+                    href: $('#newFolderHref').val() || '',
+                    description: $('#newFolderDescription').val() || '',
+                    isFolder: $('#newFolderIsFolder').val() === 'true',
+                    children: []
+                };
+
+                try {
+                    addFolderToPath(jsonData, path, newFolder);
+                    $('#json-input').val(JSON.stringify(jsonData, null, 2));
+                    renderRecords(jsonData); // Re-render to reflect changes
+                    $('#addFolderModal').modal('hide');
+                    showAlert('Folder con được thêm thành công!', 'success');
+                } catch (e) {
+                    showAlert(`Lỗi khi thêm folder con: ${e.message}`, 'danger');
+                }
+            });
+
             // Helper function to render records
             function renderRecords(data) {
                 $('#json-records').empty();
@@ -318,6 +400,7 @@
                                 ${columnVisibility.href ? '<th>Href</th>' : ''}
                                 ${columnVisibility.description ? '<th>Description</th>' : ''}
                                 ${columnVisibility.value ? '<th>Value</th>' : ''}
+                                <th>Hành động</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -331,7 +414,7 @@
                     const href = item.href || '';
                     const description = item.description || '';
                     const otherValues = Object.entries(item)
-                        .filter(([key]) => !['title', 'icon', 'href', 'description', 'children', 'path'].includes(key))
+                        .filter(([key]) => !['title', 'icon', 'href', 'description', 'children', 'path', 'isFolder'].includes(key))
                         .map(([key, value]) => `${key}: ${value}`)
                         .join(', ');
 
@@ -363,6 +446,12 @@
                         if (columnVisibility.value) {
                             row.append(`<td><span contenteditable="true" data-key="${item.path}.value">${otherValues}</span></td>`);
                         }
+                        // Thêm cột Hành động với nút Thêm Folder Con nếu isFolder là true
+                        const actionCell = $('<td></td>');
+                        if (item.isFolder) {
+                            actionCell.append(`<button class="btn btn-info btn-sm add-folder-btn" data-path="${item.path}">Thêm Folder Con</button>`);
+                        }
+                        row.append(actionCell);
                         tbody.append(row);
                     }
                 });
@@ -423,6 +512,48 @@
                     current[lastKey] = value;
                 } else {
                     throw new Error(`Invalid path: "${lastKey}" does not point to an object`);
+                }
+            }
+
+            // Helper function to add a new folder to a specific path
+            function addFolderToPath(data, path, newFolder) {
+                const keys = path.split('.');
+                let current = data;
+                for (let i = 0; i < keys.length; i++) {
+                    let key = keys[i];
+                    if (key.includes('[')) {
+                        const match = key.match(/(\w+)?\[(\d+)\]/);
+                        if (match) {
+                            const arrayKey = match[1] || '';
+                            const index = parseInt(match[2]);
+                            if (arrayKey) {
+                                if (current[arrayKey] && Array.isArray(current[arrayKey]) && index < current[arrayKey].length) {
+                                    current = current[arrayKey][index];
+                                } else {
+                                    throw new Error(`Invalid path at "${key}": Array does not exist or index out of bounds`);
+                                }
+                            } else {
+                                if (Array.isArray(current) && index < current.length) {
+                                    current = current[index];
+                                } else {
+                                    throw new Error(`Invalid path at "${key}": Index out of bounds or not an array`);
+                                }
+                            }
+                        } else {
+                            throw new Error(`Invalid path format at "${key}"`);
+                        }
+                    } else {
+                        if (current[key] && typeof current[key] === 'object') {
+                            current = current[key];
+                        } else {
+                            throw new Error(`Invalid path at "${key}": Path does not exist or not an object`);
+                        }
+                    }
+                }
+                if (current && Array.isArray(current.children)) {
+                    current.children.push(newFolder);
+                } else {
+                    throw new Error(`Invalid path: Cannot add folder to this path as it has no children array`);
                 }
             }
 

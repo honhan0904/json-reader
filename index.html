@@ -1,0 +1,416 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Viewer and Editor for toc.json</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+        }
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #json-input {
+            width: 100%;
+            height: 150px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+            overflow-x: auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 800px;
+        }
+        th, td {
+            padding: 12px;
+            vertical-align: middle;
+            border: 1px solid #dee2e6;
+        }
+        th {
+            background-color: #1a73e8;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        td[contenteditable="true"]:hover {
+            background-color: #e8f0fe;
+            cursor: text;
+        }
+        #output-json {
+            width: 100%;
+            height: 150px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            background-color: #f1f3f5;
+        }
+        .btn-primary {
+            background-color: #1a73e8;
+            border-color: #1a73e8;
+        }
+        .btn-primary:hover {
+            background-color: #1557b0;
+            border-color: #1557b0;
+        }
+        .btn-success {
+            background-color: #34c759;
+            border-color: #34c759;
+        }
+        .btn-success:hover {
+            background-color: #2ea44f;
+            border-color: #2ea44f;
+        }
+        .alert {
+            margin-top: 10px;
+        }
+        .dropdown-menu {
+            max-height: 300px;
+            overflow-y: auto;
+            min-width: 200px;
+        }
+        .record-header {
+            background-color: #f1f3f5;
+            font-weight: bold;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        #search-input {
+            max-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JSON Viewer and Editor for toc.json</h1>
+        <div class="mb-3">
+            <label for="json-input" class="form-label">Paste your JSON here (e.g., toc.json):</label>
+            <textarea id="json-input" class="form-control" placeholder="Paste your JSON"></textarea>
+            <div class="d-flex gap-2 mt-2 align-items-center">
+                <button id="load-json" class="btn btn-primary">Load JSON</button>
+                <input type="text" id="search-input" class="form-control" placeholder="Search (e.g., catalogue, showroom)">
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="manage-columns" data-bs-toggle="dropdown" aria-expanded="false">
+                        Manage Columns
+                    </button>
+                    <ul class="dropdown-menu" id="column-toggle-menu" aria-labelledby="manage-columns">
+                        <li>
+                            <div class="form-check ms-3">
+                                <input class="form-check-input column-toggle" type="checkbox" value="title" id="column-title" checked>
+                                <label class="form-check-label" for="column-title">Title</label>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="form-check ms-3">
+                                <input class="form-check-input column-toggle" type="checkbox" value="icon" id="column-icon" checked>
+                                <label class="form-check-label" for="column-icon">Icon</label>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="form-check ms-3">
+                                <input class="form-check-input column-toggle" type="checkbox" value="href" id="column-href" checked>
+                                <label class="form-check-label" for="column-href">Href</label>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="form-check ms-3">
+                                <input class="form-check-input column-toggle" type="checkbox" value="description" id="column-description" checked>
+                                <label class="form-check-label" for="column-description">Description</label>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="form-check ms-3">
+                                <input class="form-check-input column-toggle" type="checkbox" value="value" id="column-value" checked>
+                                <label class="form-check-label" for="column-value">Value</label>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="filter-paths" data-bs-toggle="dropdown" aria-expanded="false">
+                        Filter
+                    </button>
+                    <ul class="dropdown-menu" id="path-filter-menu" aria-labelledby="filter-paths">
+                        <li><a class="dropdown-item path-filter" href="#" data-filter="all">All</a></li>
+                        <li><a class="dropdown-item path-filter" href="#" data-filter="titles">Titles Only</a></li>
+                        <li><a class="dropdown-item path-filter" href="#" data-filter="values">Values Only</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="table-container">
+            <div id="json-records"></div>
+        </div>
+        <button id="save-json" class="btn btn-success">Save JSON</button>
+        <div class="mt-3">
+            <label for="output-json" class="form-label">Edited JSON Output:</label>
+            <textarea id="output-json" class="form-control" readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            let columnVisibility = {
+                title: true,
+                icon: true,
+                href: true,
+                description: true,
+                value: true
+            };
+            let currentFilter = 'all';
+            let searchQuery = '';
+
+            // Load JSON and render records
+            $('#load-json').click(function() {
+                try {
+                    const jsonInput = $('#json-input').val();
+                    const jsonData = JSON.parse(jsonInput);
+
+                    if (!Array.isArray(jsonData)) {
+                        showAlert('JSON must be an array of objects.', 'danger');
+                        return;
+                    }
+
+                    $('#json-records').empty();
+                    renderRecords(jsonData);
+
+                    showAlert('JSON loaded successfully!', 'success');
+                } catch (e) {
+                    showAlert('Invalid JSON format: ' + e.message, 'danger');
+                }
+            });
+
+            // Handle search input
+            $('#search-input').on('input', function() {
+                searchQuery = $(this).val().toLowerCase();
+                const jsonData = JSON.parse($('#json-input').val());
+                renderRecords(jsonData);
+            });
+
+            // Handle column toggle
+            $('#column-toggle-menu').on('change', '.column-toggle', function() {
+                const column = $(this).val();
+                const isChecked = $(this).is(':checked');
+                columnVisibility[column] = isChecked;
+
+                // Re-render records with current visibility
+                const jsonData = JSON.parse($('#json-input').val());
+                renderRecords(jsonData);
+                showAlert(`Column "${column.charAt(0).toUpperCase() + column.slice(1)}" ${isChecked ? 'shown' : 'hidden'}.`, 'info');
+            });
+
+            // Handle path filter
+            $('#path-filter-menu').on('click', '.path-filter', function(e) {
+                e.preventDefault();
+                currentFilter = $(this).data('filter');
+                $('#filter-paths').text(`Filter: ${$(this).text()}`);
+
+                // Re-render records with current filter
+                const jsonData = JSON.parse($('#json-input').val());
+                renderRecords(jsonData);
+                showAlert(`Filter set to "${$(this).text()}".`, 'info');
+            });
+
+            // Update JSON on cell edit
+            $('#json-records').on('blur', 'td span[contenteditable="true"]', function() {
+                const path = $(this).data('key');
+                const newValue = $(this).text();
+
+                try {
+                    const jsonData = JSON.parse($('#json-input').val());
+                    updateNestedData(jsonData, path, isNumeric(newValue) ? Number(newValue) : newValue);
+                    $('#json-input').val(JSON.stringify(jsonData, null, 2));
+                    renderRecords(jsonData); // Re-render to reflect changes
+                    showAlert('JSON updated successfully!', 'success');
+                } catch (e) {
+                    showAlert('Error updating JSON: ' + e.message, 'danger');
+                }
+            });
+
+            // Save JSON to output
+            $('#save-json').click(function() {
+                try {
+                    const jsonInput = $('#json-input').val();
+                    const jsonData = JSON.parse(jsonInput);
+                    $('#output-json').val(JSON.stringify(jsonData, null, 2));
+                    showAlert('JSON saved to output!', 'success');
+                } catch (e) {
+                    showAlert('Error saving JSON: ' + e.message, 'danger');
+                }
+            });
+
+            // Helper function to render records
+            function renderRecords(jsonData) {
+                $('#json-records').empty();
+                const items = flattenItems(jsonData);
+
+                const table = $(`
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                ${columnVisibility.title ? '<th>Title</th>' : ''}
+                                ${columnVisibility.icon ? '<th>Icon</th>' : ''}
+                                ${columnVisibility.href ? '<th>Href</th>' : ''}
+                                ${columnVisibility.description ? '<th>Description</th>' : ''}
+                                ${columnVisibility.value ? '<th>Value</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                `);
+                const tbody = table.find('tbody');
+
+                items.forEach(item => {
+                    const title = item.title || '';
+                    const icon = item.icon || '';
+                    const href = item.href || '';
+                    const description = item.description || '';
+                    const otherValues = Object.entries(item)
+                        .filter(([key]) => !['title', 'icon', 'href', 'description', 'children'].includes(key))
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join(', ');
+
+                    const matchesSearch = !searchQuery ||
+                        title.toLowerCase().includes(searchQuery) ||
+                        icon.toLowerCase().includes(searchQuery) ||
+                        href.toLowerCase().includes(searchQuery) ||
+                        description.toLowerCase().includes(searchQuery);
+
+                    const matchesFilter = currentFilter === 'all' ||
+                        (currentFilter === 'titles' && title) ||
+                        (currentFilter === 'values' && (icon || href || description || otherValues));
+
+                    if (matchesSearch && matchesFilter) {
+                        const row = $('<tr></tr>').attr('data-path', item.path);
+                        if (columnVisibility.title) {
+                            row.append(`<td><span contenteditable="true" data-key="${item.path}.title">${title}</span></td>`);
+                        }
+                        if (columnVisibility.icon) {
+                            row.append(`<td><span contenteditable="true" data-key="${item.path}.icon">${icon}</span></td>`);
+                        }
+                        if (columnVisibility.href) {
+                            row.append(`<td><span contenteditable="true" data-key="${item.path}.href">${href}</span></td>`);
+                        }
+                        if (columnVisibility.description) {
+                            row.append(`<td><span contenteditable="true" data-key="${item.path}.description">${description}</span></td>`);
+                        }
+                        if (columnVisibility.value) {
+                            row.append(`<td>${otherValues}</td>`);
+                        }
+                        tbody.append(row);
+                    }
+                });
+
+                $('#json-records').append(table);
+            }
+
+            // Helper function to flatten items
+            function flattenItems(data, prefix = '', items = []) {
+                data.forEach((item, index) => {
+                    const path = prefix ? `${prefix}[${index}]` : `[${index}]`;
+                    const newItem = { ...item, path };
+                    items.push(newItem);
+                    if (item.children && Array.isArray(item.children)) {
+                        flattenItems(item.children, `${path}.children`, items);
+                    }
+                });
+                return items;
+            }
+
+            // Helper function to update nested data by path
+            function updateNestedData(data, path, value) {
+                const keys = path.split('.');
+                let current = data;
+                for (let i = 0; i < keys.length - 1; i++) {
+                    let key = keys[i];
+                    if (key.includes('[')) {
+                        const [arrayKey, index] = key.split(/\[|\]/).filter(Boolean);
+                        current = arrayKey ? current[arrayKey][parseInt(index)] : current[parseInt(index)];
+                    } else {
+                        current = current[key];
+                    }
+                }
+                const lastKey = keys[keys.length - 1];
+                current[lastKey] = value;
+            }
+
+            // Helper function to check if a value is numeric
+            function isNumeric(value) {
+                return !isNaN(parseFloat(value)) && isFinite(value);
+            }
+
+            // Helper function to show alerts
+            function showAlert(message, type) {
+                const alert = $(`<div class="alert alert-${type} alert-dismissible fade show" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`);
+                $('.container').prepend(alert);
+                setTimeout(() => alert.alert('close'), 3000);
+            }
+        });
+    </script>
+</body>
+</html>

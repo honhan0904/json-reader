@@ -48,7 +48,7 @@
     <!-- External dependencies: React, ReactDOM, Babel, Tailwind CSS, and Poppins font -->
     <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.6/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.2/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- CSS: Styles for the JSON editor interface -->
@@ -74,6 +74,7 @@
         .content-wrapper {
             transition: filter 0.3s ease;
             min-height: 100vh;
+            margin-left: 16rem; /* Match sidebar width */
         }
 
         /* Apply blur to content when editing */
@@ -88,17 +89,16 @@
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
             color: #ffffff;
             width: 16rem;
-            height: 100vh;
+            height: 100vh; /* Full viewport height */
             position: fixed;
-            padding: 1.5rem;
             top: 0;
             left: 0;
-            z-index: 10;
+            padding: 1.5rem;
+            z-index: 10; /* Below modal but above content */
         }
 
         /* Main content area */
         .main-content {
-            margin-left: 16rem;
             padding: 1.5rem;
             min-height: 100vh;
         }
@@ -190,7 +190,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000; /* Above all content */
+            z-index: 1000; /* Above sidebar and content */
             padding: 1rem;
         }
 
@@ -212,15 +212,15 @@
         .children-container {
             opacity: 0;
             transform: translateY(-10px);
-            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-            height: 0;
+            max-height: 0;
             overflow: hidden;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out, max-height 0.5s ease-in-out;
         }
 
         .children-container.expanded {
             opacity: 1;
             transform: translateY(0);
-            height: auto;
+            max-height: 1000px; /* Large enough for content */
             padding-top: 0.5rem;
         }
 
@@ -244,6 +244,22 @@
             border-radius: 0.375rem;
         }
 
+        /* Emoji reference link */
+        .emoji-link {
+            display: block;
+            background-color: #4b5563;
+            color: #ffffff;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        .emoji-link:hover {
+            background-color: #6b7280;
+        }
+
         /* Animation keyframes */
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -251,8 +267,8 @@
         }
 
         @keyframes scaleIn {
-            from { transform: scale(0.9); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+            from { transform: scale(0.9); }
+            to { transform: scale(1); }
         }
 
         @keyframes spin {
@@ -261,7 +277,7 @@
         }
 
         /* Responsive adjustments */
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
                 height: auto;
@@ -269,8 +285,11 @@
                 padding: 1rem;
             }
 
-            .main-content {
+            .content-wrapper {
                 margin-left: 0;
+            }
+
+            .main-content {
                 padding: 1rem;
             }
 
@@ -291,6 +310,30 @@
     <div id="fallback-ui">
         <h1>Error: Application Failed to Load</h1>
         <p>Please check your internet connection or try refreshing the page.</p>
+    </div>
+    <!-- Sidebar outside content-wrapper -->
+    <div class="sidebar">
+        <h1 class="text-2xl font-bold text-white mb-6">JSON Editor</h1>
+        <input
+            type="file"
+            accept=".json"
+            id="file-upload"
+            class="border border-gray-600 rounded-lg p-2 bg-gray-800 text-white w-full mb-4"
+        />
+        <button
+            id="export-button"
+            class="action-button bg-blue-600 text-white px-4 py-2 rounded-lg w-full mb-4"
+        >
+            Export JSON
+        </button>
+        <a
+            href="https://emojipedia.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="emoji-link"
+        >
+            Emoji Reference
+        </a>
     </div>
     <!-- Root div for React app -->
     <div id="root"></div>
@@ -325,13 +368,14 @@
             const toggleEditModal = (show) => {
                 setShowEditModal(show);
                 onEditToggle(show);
-                console.log('Edit modal toggled:', show, 'for node:', node.title);
+                console.log('Edit modal toggled:', show, 'for node:', node.title, 'path:', path);
             };
 
             // Toggle node expansion
             const handleToggle = () => {
-                if (node.isFolder) {
+                if (node.isFolder || node.children?.length > 0) {
                     setIsExpanded(!isExpanded);
+                    console.log('Node toggled:', node.title, 'expanded:', !isExpanded);
                 }
             };
 
@@ -354,6 +398,12 @@
                             onUpdate(path, key, editValues[key]);
                         }
                     });
+                    // Update isFolder, but enforce true if children exist
+                    const newIsFolder = node.children?.length > 0 ? true : editValues.isFolder;
+                    if (newIsFolder !== node.isFolder) {
+                        console.log('Updating isFolder for', node.title, 'to', newIsFolder);
+                        onUpdate(path, 'isFolder', newIsFolder);
+                    }
                     toggleEditModal(false);
                 } catch (error) {
                     console.error('Error updating node:', error);
@@ -363,9 +413,15 @@
             // Add a new child node or folder
             const handleAddChild = (newChild) => {
                 try {
+                    // Set parent as folder if not already
+                    if (!node.isFolder) {
+                        console.log('Setting parent as folder:', node.title, path);
+                        onUpdate(path, 'isFolder', true);
+                    }
                     const newChildren = [...(node.children || []), newChild];
                     onUpdate(path, 'children', newChildren);
                     setShowAddModal(false);
+                    console.log('Child added to:', node.title, 'newChildren:', newChildren);
                 } catch (error) {
                     console.error('Error adding child:', error);
                 }
@@ -375,6 +431,26 @@
             const handleDelete = () => {
                 try {
                     onUpdate(path, null, null, true);
+                    // If deleting a child, check parent's children count
+                    if (path.length > 1) {
+                        const parentPath = path.slice(0, -2);
+                        setTimeout(() => {
+                            // Deferred check to ensure state updates
+                            setJsonData((prevData) => {
+                                const newData = JSON.parse(JSON.stringify(prevData));
+                                let parent = newData;
+                                for (let i = 0; i < parentPath.length - 1; i += 2) {
+                                    parent = parent[parentPath[i]][parentPath[i + 1]];
+                                }
+                                parent = parent[parentPath[parentPath.length - 2]][parentPath[parentPath.length - 1]];
+                                if (parent.children?.length === 0 && parent.isFolder) {
+                                    console.log('Setting parent isFolder to false:', parent.title, parentPath);
+                                    onUpdate(parentPath, 'isFolder', false);
+                                }
+                                return newData;
+                            });
+                        }, 0);
+                    }
                 } catch (error) {
                     console.error('Error deleting node:', error);
                 }
@@ -385,12 +461,14 @@
                     <div className="tree-node">
                         {/* Node header */}
                         <div className="node-header" onClick={handleToggle}>
-                            {node.isFolder && (
+                            {(node.isFolder || node.children?.length > 0) && (
                                 <span className="text-blue-400 transition-transform duration-300">
                                     {isExpanded ? '▼' : '▶'}
                                 </span>
                             )}
-                            <span className="text-lg">{node.icon || (node.isFolder ? '📁' : '📄')}</span>
+                            <span className="text-lg">
+                                {node.icon || (node.isFolder || node.children?.length > 0 ? '📁' : '📄')}
+                            </span>
                             <span
                                 onDoubleClick={handleEdit}
                                 className="text-white font-medium hover:underline"
@@ -577,9 +655,19 @@
                                                 className="node-input"
                                             />
                                         </div>
+                                        <div className="mb-4">
+                                            <label className="flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={editValues.isFolder || false}
+                                                    onChange={(e) => handleEditChange('isFolder', e.target.checked)}
+                                                    className="mr-2"
+                                                />
+                                                <span>Is Folder?</span>
+                                            </label>
+                                        </div>
                                         <div className="flex justify-end gap-2">
                                             <button
-                                                type="button"
                                                 onClick={() => toggleEditModal(false)}
                                                 className="action-button bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
                                             >
@@ -603,7 +691,7 @@
 
         /* App Component: Main application logic */
         function App() {
-            // State for JSON data, file name, loading, errors, and blur
+            // State for JSON data, file name, loading, errors, and blur state
             const [jsonData, setJsonData] = React.useState([]);
             const [fileName, setFileName] = React.useState('toc.json');
             const [isLoading, setIsLoading] = React.useState(false);
@@ -629,8 +717,8 @@
                         }
                         console.log('Loaded JSON:', data);
                         setJsonData(data);
-                    } catch (error) {
-                        console.error('Error parsing JSON:', error);
+                    } catch (err) {
+                        console.error('Error parsing JSON:', err);
                         setError('Invalid JSON file. Please upload a valid JSON array.');
                     } finally {
                         setIsLoading(false);
@@ -660,7 +748,7 @@
                                 current = current[path[i]][path[i + 1]];
                             }
                             if (isDelete) {
-                                current.splice(path[path.length - 1], 1);
+                                current.splice(path[current.length - 1], 1);
                             } else {
                                 current[path[path.length - 1]][key] = value;
                             }
@@ -695,52 +783,45 @@
             // Toggle edit state
             const handleEditToggle = (isEditing) => {
                 setIsEditing(isEditing);
-                console.log('Blur state changed:', isEditing);
+                console.log('Editing state changed:', isEditing);
             };
+
+            // Attach event listeners for sidebar buttons
+            React.useEffect(() => {
+                const fileInput = document.getElementById('file-upload');
+                const exportButton = document.getElementById('export-button');
+                fileInput.addEventListener('change', handleFileUpload);
+                exportButton.addEventListener('click', handleExport);
+                return () => {
+                    fileInput.removeEventListener('change', handleFileUpload);
+                    exportButton.removeEventListener('click', handleExport);
+                };
+            }, [jsonData, fileName]);
 
             console.log('Rendering App');
             return (
                 <div className={`content-wrapper ${isEditing ? 'blur' : ''}`}>
-                    <div className="min-h-screen flex">
-                        {/* Sidebar */}
-                        <div className="sidebar">
-                            <h1 className="text-2xl font-bold text-white mb-6">JSON Editor</h1>
-                            <input
-                                type="file"
-                                accept=".json"
-                                onChange={handleFileUpload}
-                                className="border border-gray-600 rounded-lg p-2 bg-gray-800 text-white w-full mb-4"
-                            />
-                            <button
-                                onClick={handleExport}
-                                className="action-button bg-blue-600 text-white px-4 py-2 rounded-lg w-full hover:bg-blue-700"
-                            >
-                                Export JSON
-                            </button>
-                        </div>
-                        {/* Main content */}
-                        <div className="main-content">
-                            <div className="bg-gray-800 rounded-lg shadow-xl p-6">
-                                {isLoading ? (
-                                    <div className="spinner"></div>
-                                ) : error ? (
-                                    <div className="error-message">{error}</div>
-                                ) : jsonData.length > 0 ? (
-                                    jsonData.map((node, index) => (
-                                        <TreeNode
-                                            key={index}
-                                            node={node}
-                                            path={[index]}
-                                            onUpdate={handleUpdate}
-                                            onEditToggle={handleEditToggle}
-                                        />
-                                    ))
-                                ) : (
-                                    <p className="text-gray-400 text-center">
-                                        Upload a JSON file to start editing
-                                    </p>
-                                )}
-                            </div>
+                    <div className="main-content">
+                        <div className="bg-gray-800 rounded-lg shadow-xl p-6">
+                            {isLoading ? (
+                                <div className="spinner"></div>
+                            ) : error ? (
+                                <div className="error-message">{error}</div>
+                            ) : jsonData.length > 0 ? (
+                                jsonData.map((node, index) => (
+                                    <TreeNode
+                                        key={index}
+                                        node={node}
+                                        path={[index]}
+                                        onUpdate={handleUpdate}
+                                        onEditToggle={handleEditToggle}
+                                    />
+                                ))
+                            ) : (
+                                <p className="text-gray-400 text-center">
+                                    Upload a JSON file to start editing
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -752,7 +833,7 @@
             const [error, setError] = React.useState(null);
             React.useEffect(() => {
                 const errorHandler = (event) => {
-                    console.error('Uncaught error:', event.error);
+                    console.error('An unexpected error:', event.error);
                     setError(`An unexpected error occurred: ${event.error.message}. Please refresh the page.`);
                     document.getElementById('fallback-ui').style.display = 'block';
                 };
@@ -772,8 +853,8 @@
                 document.getElementById('root')
             );
             console.log('React app rendered successfully');
-        } catch (e) {
-            console.error('Failed to render React app:', e);
+        } catch (error) {
+            console.error('Failed to render React app:', error);
             document.getElementById('fallback-ui').style.display = 'block';
         }
     </script>

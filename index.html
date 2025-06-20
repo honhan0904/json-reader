@@ -46,12 +46,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JSON Editor</title>
     <!-- External dependencies: React, ReactDOM, Babel, Tailwind CSS, and Poppins font -->
-    <script src="text/html" src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
-    <script src="text/html" src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="text/html" src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.6/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.6/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- CSS: styles for the JSON editor interface -->
+    <!-- CSS: Styles for the JSON editor interface -->
     <style>
         /* Global styles for body */
         body {
@@ -60,6 +60,14 @@
             color: #e5e7eb;
             margin: 0;
             overflow-x: hidden;
+        }
+
+        /* Fallback UI for blank screen */
+        #fallback-ui {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: #ef4444;
         }
 
         /* Content wrapper for blur effect */
@@ -279,15 +287,26 @@
     </style>
 </head>
 <body>
+    <!-- Fallback UI for blank screen -->
+    <div id="fallback-ui">
+        <h1>Error: Application Failed to Load</h1>
+        <p>Please check your internet connection or try refreshing the page.</p>
+    </div>
     <!-- Root div for React app -->
     <div id="root"></div>
-    <!-- Separate div for modals to avoid blur -->
+    <!-- Separate div for modals -->
     <div id="modal-root"></div>
     <!-- JavaScript: Logic for the JSON editor using React and JSX -->
     <script type="text/babel">
+        console.log('Script started');
+
         /* ModalPortal Component: Renders modals in modal-root */
         function ModalPortal({ children }) {
             const modalRoot = document.getElementById('modal-root');
+            if (!modalRoot) {
+                console.error('modal-root not found');
+                return null;
+            }
             return ReactDOM.createPortal(children, modalRoot);
         }
 
@@ -306,7 +325,7 @@
             const toggleEditModal = (show) => {
                 setShowEditModal(show);
                 onEditToggle(show);
-                console.log('Edit modal toggled:', show);
+                console.log('Edit modal toggled:', show, 'for node:', node.title);
             };
 
             // Toggle node expansion
@@ -679,6 +698,7 @@
                 console.log('Blur state changed:', isEditing);
             };
 
+            console.log('Rendering App');
             return (
                 <div className={`content-wrapper ${isEditing ? 'blur' : ''}`}>
                     <div className="min-h-screen flex">
@@ -733,7 +753,8 @@
             React.useEffect(() => {
                 const errorHandler = (event) => {
                     console.error('Uncaught error:', event.error);
-                    setError('An unexpected error occurred. Please refresh the page.');
+                    setError(`An unexpected error occurred: ${event.error.message}. Please refresh the page.`);
+                    document.getElementById('fallback-ui').style.display = 'block';
                 };
                 window.addEventListener('error', errorHandler);
                 return () => window.removeEventListener('error', errorHandler);
@@ -742,12 +763,19 @@
         }
 
         /* Render the application */
-        ReactDOM.render(
-            <ErrorBoundary>
-                <App />
-            </ErrorBoundary>,
-            document.getElementById('root')
-        );
+        console.log('Attempting to render React app');
+        try {
+            ReactDOM.render(
+                <ErrorBoundary>
+                    <App />
+                </ErrorBoundary>,
+                document.getElementById('root')
+            );
+            console.log('React app rendered successfully');
+        } catch (e) {
+            console.error('Failed to render React app:', e);
+            document.getElementById('fallback-ui').style.display = 'block';
+        }
     </script>
 </body>
 </html>

@@ -46,18 +46,708 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JSON Editor</title>
     <!-- External dependencies: React, ReactDOM, Babel, Tailwind CSS, and Poppins font -->
-    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.6/babel.min.js"></script>
+    <script src="text/html" src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="text/html" src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="text/html" src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.6/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Link to external CSS file for styling -->
-    <link rel="stylesheet" href="styles.css">
+    <!-- CSS: styles for the JSON editor interface -->
+    <style>
+        /* Global styles for body */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #1f2937; /* Dark gray background */
+            color: #e5e7eb;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Content wrapper for blur effect */
+        .content-wrapper {
+            transition: filter 0.3s ease;
+            min-height: 100vh;
+        }
+
+        /* Apply blur to content when editing */
+        .content-wrapper.blur {
+            filter: blur(4px);
+            pointer-events: none; /* Prevent interaction with blurred content */
+        }
+
+        /* Sidebar styling */
+        .sidebar {
+            background: linear-gradient(180deg, #1e3a8a, #1e40af); /* Indigo gradient */
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            color: #ffffff;
+            width: 16rem;
+            height: 100vh;
+            position: fixed;
+            padding: 1.5rem;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        /* Main content area */
+        .main-content {
+            margin-left: 16rem;
+            padding: 1.5rem;
+            min-height: 100vh;
+        }
+
+        /* Tree node styling */
+        .tree-node {
+            background-color: #2d3748;
+            margin: 0.75rem 0 0 1.25rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid #3b82f6;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .tree-node:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .tree-node:nth-child(even) {
+            background-color: #374151;
+        }
+
+        /* Node header */
+        .node-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        /* Node content */
+        .node-content {
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+
+        /* Input fields */
+        .node-input {
+            border: 1px solid #4b5563;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            background-color: #2d3748;
+            color: #e5e7eb;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .node-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Action buttons */
+        .action-button {
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .action-button:hover {
+            transform: scale(1.1);
+        }
+
+        /* Highlighted plus button */
+        .add-button {
+            color: #06b6d4;
+            font-size: 1.25rem;
+            transition: color 0.2s, text-shadow 0.2s;
+        }
+
+        .add-button:hover {
+            color: #0e7490;
+            text-shadow: 0 0 6px rgba(6, 182, 212, 0.5);
+        }
+
+        /* Modal overlay */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000; /* Above all content */
+            padding: 1rem;
+        }
+
+        /* Modal content */
+        .modal-content {
+            background-color: #2d3748;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 36rem; /* Wider modal */
+            min-width: 24rem;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 1.5rem;
+            animation: scaleIn 0.3s ease-out;
+        }
+
+        /* Children container */
+        .children-container {
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .children-container.expanded {
+            opacity: 1;
+            transform: translateY(0);
+            height: auto;
+            padding-top: 0.5rem;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 2px solid #3b82f6;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        /* Error message */
+        .error-message {
+            color: #ef4444;
+            text-align: center;
+            padding: 1rem;
+            background-color: #450a0a;
+            border-radius: 0.375rem;
+        }
+
+        /* Animation keyframes */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: static;
+                padding: 1rem;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .modal-content {
+                max-width: 95%;
+                min-width: 90%;
+                padding: 1rem;
+            }
+
+            .tree-node {
+                margin-left: 0.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Root div for React to render the application -->
+    <!-- Root div for React app -->
     <div id="root"></div>
-    <!-- Link to external JS file for application logic -->
-    <script type="text/babel" src="script.js"></script>
+    <!-- Separate div for modals to avoid blur -->
+    <div id="modal-root"></div>
+    <!-- JavaScript: Logic for the JSON editor using React and JSX -->
+    <script type="text/babel">
+        /* ModalPortal Component: Renders modals in modal-root */
+        function ModalPortal({ children }) {
+            const modalRoot = document.getElementById('modal-root');
+            return ReactDOM.createPortal(children, modalRoot);
+        }
+
+        /* TreeNode Component: Renders a single node in the JSON tree */
+        function TreeNode({ node, path, onUpdate, onEditToggle }) {
+            // State for node expansion, modal visibility, and editing
+            const [isExpanded, setIsExpanded] = React.useState(false);
+            const [showAddModal, setShowAddModal] = React.useState(false);
+            const [showEditModal, setShowEditModal] = React.useState(false);
+            const [editValues, setEditValues] = React.useState({ ...node });
+
+            // Log rendering
+            console.log('Rendering TreeNode:', node.title, path);
+
+            // Toggle edit modal
+            const toggleEditModal = (show) => {
+                setShowEditModal(show);
+                onEditToggle(show);
+                console.log('Edit modal toggled:', show);
+            };
+
+            // Toggle node expansion
+            const handleToggle = () => {
+                if (node.isFolder) {
+                    setIsExpanded(!isExpanded);
+                }
+            };
+
+            // Open edit modal
+            const handleEdit = () => {
+                setEditValues({ ...node });
+                toggleEditModal(true);
+            };
+
+            // Update edit form values
+            const handleEditChange = (key, value) => {
+                setEditValues({ ...editValues, [key]: value });
+            };
+
+            // Save edited node values
+            const handleEditSubmit = () => {
+                try {
+                    ['title', 'description', 'href', 'icon'].forEach((key) => {
+                        if (editValues[key] !== node[key]) {
+                            onUpdate(path, key, editValues[key]);
+                        }
+                    });
+                    toggleEditModal(false);
+                } catch (error) {
+                    console.error('Error updating node:', error);
+                }
+            };
+
+            // Add a new child node or folder
+            const handleAddChild = (newChild) => {
+                try {
+                    const newChildren = [...(node.children || []), newChild];
+                    onUpdate(path, 'children', newChildren);
+                    setShowAddModal(false);
+                } catch (error) {
+                    console.error('Error adding child:', error);
+                }
+            };
+
+            // Delete the current node
+            const handleDelete = () => {
+                try {
+                    onUpdate(path, null, null, true);
+                } catch (error) {
+                    console.error('Error deleting node:', error);
+                }
+            };
+
+            return (
+                <>
+                    <div className="tree-node">
+                        {/* Node header */}
+                        <div className="node-header" onClick={handleToggle}>
+                            {node.isFolder && (
+                                <span className="text-blue-400 transition-transform duration-300">
+                                    {isExpanded ? '▼' : '▶'}
+                                </span>
+                            )}
+                            <span className="text-lg">{node.icon || (node.isFolder ? '📁' : '📄')}</span>
+                            <span
+                                onDoubleClick={handleEdit}
+                                className="text-white font-medium hover:underline"
+                            >
+                                {node.title || 'Untitled'}
+                            </span>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setShowAddModal(true); }}
+                                className="ml-2 add-button action-button"
+                                title="Add Child/Folder"
+                            >
+                                ➕
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                                className="ml-2 text-red-400 hover:text-red-300 action-button"
+                                title="Delete Node"
+                            >
+                                🗑️
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleEdit(); }}
+                                className="ml-2 text-blue-400 hover:text-blue-300 action-button"
+                                title="Edit Node"
+                            >
+                                ✏️
+                            </button>
+                        </div>
+                        {/* Node content */}
+                        <div className="node-content">
+                            <div className="hover:text-gray-200">
+                                {node.description || 'No description'}
+                            </div>
+                            <div className="hover:text-gray-200">
+                                {node.href || 'No link'}
+                            </div>
+                        </div>
+                        {/* Child nodes */}
+                        {node.children && node.children.length > 0 && (
+                            <div className={`children-container ${isExpanded ? 'expanded' : ''}`}>
+                                {node.children.map((child, index) => (
+                                    <TreeNode
+                                        key={index}
+                                        node={child}
+                                        path={[...path, 'children', index]}
+                                        onUpdate={onUpdate}
+                                        onEditToggle={onEditToggle}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    {/* Modals rendered in modal-root */}
+                    <ModalPortal>
+                        {/* Add modal */}
+                        {showAddModal && (
+                            <div className="modal">
+                                <div className="modal-content">
+                                    <h2 className="text-xl font-bold mb-4 text-white">Add New Child/Folder</h2>
+                                    <form
+                                        onSubmit={(e) => {
+                                            e.preventDefault();
+                                            try {
+                                                const newChild = {
+                                                    title: e.target.title.value || 'New Item',
+                                                    icon: e.target.icon.value || '📄',
+                                                    href: e.target.href.value || '',
+                                                    description: e.target.description.value || '',
+                                                    isFolder: e.target.isFolder.checked,
+                                                    children: []
+                                                };
+                                                handleAddChild(newChild);
+                                            } catch (error) {
+                                                console.error('Error adding child:', error);
+                                            }
+                                        }}
+                                    >
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium mb-1">Title</label>
+                                            <input
+                                                name="title"
+                                                type="text"
+                                                defaultValue="New Item"
+                                                className="node-input"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium mb-1">Icon</label>
+                                            <input
+                                                name="icon"
+                                                type="text"
+                                                defaultValue="📄"
+                                                className="node-input"
+                                            />
+                                        </div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium mb-1">Link (href)</label>
+                                            <input
+                                                name="href"
+                                                type="text"
+                                                defaultValue=""
+                                                className="node-input"
+                                            />
+                                        </div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium mb-1">Description</label>
+                                            <input
+                                                name="description"
+                                                type="text"
+                                                defaultValue=""
+                                                className="node-input"
+                                            />
+                                        </div>
+                                        <div className="mb-4">
+                                            <label className="flex items-center">
+                                                <input
+                                                    name="isFolder"
+                                                    type="checkbox"
+                                                    className="mr-2"
+                                                />
+                                                <span>Is Folder</span>
+                                            </label>
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowAddModal(false)}
+                                                className="action-button bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                className="action-button bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                        {/* Edit modal */}
+                        {showEditModal && (
+                            <div className="modal">
+                                <div className="modal-content">
+                                    <h2 className="text-xl font-bold mb-4 text-white">Edit Node</h2>
+                                    <div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium mb-1">Title</label>
+                                            <input
+                                                type="text"
+                                                value={editValues.title || ''}
+                                                onChange={(e) => handleEditChange('title', e.target.value)}
+                                                className="node-input"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium mb-1">Icon</label>
+                                            <input
+                                                type="text"
+                                                value={editValues.icon || ''}
+                                                onChange={(e) => handleEditChange('icon', e.target.value)}
+                                                className="node-input"
+                                            />
+                                        </div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium mb-1">Link (href)</label>
+                                            <input
+                                                type="text"
+                                                value={editValues.href || ''}
+                                                onChange={(e) => handleEditChange('href', e.target.value)}
+                                                className="node-input"
+                                            />
+                                        </div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium mb-1">Description</label>
+                                            <input
+                                                type="text"
+                                                value={editValues.description || ''}
+                                                onChange={(e) => handleEditChange('description', e.target.value)}
+                                                className="node-input"
+                                            />
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleEditModal(false)}
+                                                className="action-button bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={handleEditSubmit}
+                                                className="action-button bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                                            >
+                                                Update
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </ModalPortal>
+                </>
+            );
+        }
+
+        /* App Component: Main application logic */
+        function App() {
+            // State for JSON data, file name, loading, errors, and blur
+            const [jsonData, setJsonData] = React.useState([]);
+            const [fileName, setFileName] = React.useState('toc.json');
+            const [isLoading, setIsLoading] = React.useState(false);
+            const [error, setError] = React.useState(null);
+            const [isEditing, setIsEditing] = React.useState(false);
+
+            // Log initialization
+            console.log('App initialized');
+
+            // Handle file upload
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                setFileName(file.name);
+                setIsLoading(true);
+                setError(null);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (!Array.isArray(data)) {
+                            throw new Error('JSON must be an array of nodes');
+                        }
+                        console.log('Loaded JSON:', data);
+                        setJsonData(data);
+                    } catch (error) {
+                        console.error('Error parsing JSON:', error);
+                        setError('Invalid JSON file. Please upload a valid JSON array.');
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                reader.onerror = () => {
+                    console.error('Error reading file');
+                    setError('Failed to read the file. Please try again.');
+                    setIsLoading(false);
+                };
+                reader.readAsText(file);
+            };
+
+            // Update JSON data
+            const handleUpdate = (path, key, value, isDelete = false) => {
+                try {
+                    setJsonData((prevData) => {
+                        const newData = JSON.parse(JSON.stringify(prevData));
+                        if (path.length === 1 && isDelete) {
+                            newData.splice(path[0], 1);
+                        } else {
+                            let current = newData;
+                            for (let i = 0; i < path.length - 1; i += 2) {
+                                if (!current[path[i]]) {
+                                    current[path[i]] = [];
+                                }
+                                current = current[path[i]][path[i + 1]];
+                            }
+                            if (isDelete) {
+                                current.splice(path[path.length - 1], 1);
+                            } else {
+                                current[path[path.length - 1]][key] = value;
+                            }
+                        }
+                        console.log('Updated JSON:', newData);
+                        return newData;
+                    });
+                } catch (error) {
+                    console.error('Error updating JSON:', error);
+                    setError('Failed to update JSON. Please try again.');
+                }
+            };
+
+            // Export JSON
+            const handleExport = () => {
+                try {
+                    const jsonString = JSON.stringify(jsonData, null, 2);
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    console.log('Exported JSON:', jsonString);
+                } catch (error) {
+                    console.error('Error exporting JSON:', error);
+                    setError('Failed to export JSON. Please try again.');
+                }
+            };
+
+            // Toggle edit state
+            const handleEditToggle = (isEditing) => {
+                setIsEditing(isEditing);
+                console.log('Blur state changed:', isEditing);
+            };
+
+            return (
+                <div className={`content-wrapper ${isEditing ? 'blur' : ''}`}>
+                    <div className="min-h-screen flex">
+                        {/* Sidebar */}
+                        <div className="sidebar">
+                            <h1 className="text-2xl font-bold text-white mb-6">JSON Editor</h1>
+                            <input
+                                type="file"
+                                accept=".json"
+                                onChange={handleFileUpload}
+                                className="border border-gray-600 rounded-lg p-2 bg-gray-800 text-white w-full mb-4"
+                            />
+                            <button
+                                onClick={handleExport}
+                                className="action-button bg-blue-600 text-white px-4 py-2 rounded-lg w-full hover:bg-blue-700"
+                            >
+                                Export JSON
+                            </button>
+                        </div>
+                        {/* Main content */}
+                        <div className="main-content">
+                            <div className="bg-gray-800 rounded-lg shadow-xl p-6">
+                                {isLoading ? (
+                                    <div className="spinner"></div>
+                                ) : error ? (
+                                    <div className="error-message">{error}</div>
+                                ) : jsonData.length > 0 ? (
+                                    jsonData.map((node, index) => (
+                                        <TreeNode
+                                            key={index}
+                                            node={node}
+                                            path={[index]}
+                                            onUpdate={handleUpdate}
+                                            onEditToggle={handleEditToggle}
+                                        />
+                                    ))
+                                ) : (
+                                    <p className="text-gray-400 text-center">
+                                        Upload a JSON file to start editing
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        /* ErrorBoundary Component */
+        function ErrorBoundary({ children }) {
+            const [error, setError] = React.useState(null);
+            React.useEffect(() => {
+                const errorHandler = (event) => {
+                    console.error('Uncaught error:', event.error);
+                    setError('An unexpected error occurred. Please refresh the page.');
+                };
+                window.addEventListener('error', errorHandler);
+                return () => window.removeEventListener('error', errorHandler);
+            }, []);
+            return error ? <div className="error-message">{error}</div> : children;
+        }
+
+        /* Render the application */
+        ReactDOM.render(
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>,
+            document.getElementById('root')
+        );
+    </script>
 </body>
 </html>

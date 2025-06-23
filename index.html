@@ -270,16 +270,39 @@
         <p>Please check your internet connection or try refreshing the page.</p>
     </div>
     <!-- Sidebar outside content-wrapper -->
-    <div class="sidebar">
-        <h1 class="text-2xl font-bold text-white mb-6">JSON Editor</h1>
-        <input type="file" accept=".json" id="file-upload" class="border border-gray-600 rounded-lg p-2 bg-gray-800 text-white w-full mb-4">
-        <button id="export-button" class="action-button bg-blue-600 text-white px-4 py-2 rounded-lg w-full mb-4">
-            Export JSON
-        </button>
-        <a href="https://emojipedia.org/" target="_blank" rel="noopener noreferrer" class="emoji-link">
-            Emoji Reference
-        </a>
-    </div>
+<div class="sidebar">
+    <h1 class="text-2xl font-bold text-white mb-6">JSON Editor</h1>
+    <input
+        type="file"
+        accept=".json"
+        id="file-upload"
+        class="border border-gray-600 rounded-lg p-2 bg-gray-800 text-white w-full mb-4"
+    />
+    <button
+        id="export-button"
+        class="action-button bg-blue-600 text-white px-4 py-2 rounded-lg w-full mb-4"
+    >
+        Export JSON
+    </button>
+    <!-- Existing Emoji Reference link to Emojipedia -->
+    <a
+        href="https://emojipedia.org/"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="emoji-link"
+    >
+        Emoji Reference
+    </a>
+    <!-- New Emojis link to EmojiDB - Thêm nút tham khảo emoji liên quan đến Customer -->
+    <a
+        href="https://emojidb.org/customer-emojis?utm_source=user_search"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="emoji-link"
+    >
+        EmojisDB
+    </a>
+</div>
     <!-- Root div for React app -->
     <div id="root"></div>
     <!-- Separate div for modals -->

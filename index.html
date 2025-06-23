@@ -101,13 +101,35 @@
         .main-content {
             padding: 1.5rem;
             min-height: 100vh;
+            max-height: calc(100vh - 3rem); /* Account for padding */
+            overflow-y: auto; /* Scrollable content */
+            scrollbar-width: thin; /* Firefox */
+            scrollbar-color: #4b5563 #2d3748; /* Firefox */
+        }
+
+        /* Webkit scrollbar styling */
+        .main-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .main-content::-webkit-scrollbar-track {
+            background: #2d3748;
+        }
+
+        .main-content::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
         }
 
         /* Tree node styling */
         .tree-node {
             background-color: #2d3748;
-            margin: 0.75rem 0 0 1.25rem;
-            padding: 1rem;
+            margin: 0.5rem 0 0 1rem; /* Reduced margin for more nodes */
+            padding: 0.75rem; /* Tighter padding */
             border-radius: 0.5rem;
             border-left: 4px solid #3b82f6;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
@@ -127,7 +149,7 @@
         .node-header {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem; /* Reduced gap */
             cursor: pointer;
             font-weight: 600;
             color: #e5e7eb;
@@ -135,7 +157,7 @@
 
         /* Node content */
         .node-content {
-            padding: 0.5rem 0;
+            padding: 0.25rem 0; /* Tighter padding */
             font-size: 0.875rem;
             color: #9ca3af;
         }
@@ -213,14 +235,33 @@
             opacity: 0;
             transform: translateY(-10px);
             max-height: 0;
-            overflow: hidden;
+            overflow-y: auto; /* Scrollable children */
             transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out, max-height 0.5s ease-in-out;
+            scrollbar-width: thin;
+            scrollbar-color: #4b5563 #2d3748;
+        }
+
+        .children-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .children-container::-webkit-scrollbar-track {
+            background: #2d3748;
+        }
+
+        .children-container::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        .children-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
         }
 
         .children-container.expanded {
             opacity: 1;
             transform: translateY(0);
-            max-height: 1000px; /* Large enough for content */
+            max-height: none; /* Allow natural height */
             padding-top: 0.5rem;
         }
 
@@ -291,6 +332,7 @@
 
             .main-content {
                 padding: 1rem;
+                max-height: calc(100vh - 2rem); /* Adjusted for mobile */
             }
 
             .modal-content {
@@ -300,7 +342,7 @@
             }
 
             .tree-node {
-                margin-left: 0.5rem;
+                margin-left: 0.75rem; /* Slightly increased for mobile clarity */
             }
         }
     </style>
@@ -332,7 +374,15 @@
             rel="noopener noreferrer"
             class="emoji-link"
         >
-            Emoji Reference
+            Emoji Reference (Emojipedia)
+        </a>
+        <a
+            href="https://emojidb.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="emoji-link"
+        >
+            Emoji Reference (Emojidb)
         </a>
     </div>
     <!-- Root div for React app -->
@@ -362,7 +412,7 @@
             const [editValues, setEditValues] = React.useState({ ...node });
 
             // Log rendering
-            console.log('Rendering TreeNode:', node.title, path);
+            console.log('Rendering TreeNode:', node.title, path, 'children count:', node.children?.length || 0);
 
             // Toggle edit modal
             const toggleEditModal = (show) => {
@@ -435,7 +485,6 @@
                     if (path.length > 1) {
                         const parentPath = path.slice(0, -2);
                         setTimeout(() => {
-                            // Deferred check to ensure state updates
                             setJsonData((prevData) => {
                                 const newData = JSON.parse(JSON.stringify(prevData));
                                 let parent = newData;
@@ -748,7 +797,7 @@
                                 current = current[path[i]][path[i + 1]];
                             }
                             if (isDelete) {
-                                current.splice(path[current.length - 1], 1);
+                                current.splice(path[path.length - 1], 1);
                             } else {
                                 current[path[path.length - 1]][key] = value;
                             }

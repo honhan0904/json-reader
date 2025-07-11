@@ -1,4 +1,7 @@
-<!DOCTYPE html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
     <!-- Meta tags for character encoding and responsive viewport -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,266 +11,277 @@
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.2/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- CSS: Styles for the JSON editor interface -->
     <style>
-    /* Global styles for body */
-    body {
-        font-family: 'Poppins', sans-serif;
-        background-color: #1f2937; /* Dark gray background */
-        color: #e5e7eb;
-        margin: 0;
-        overflow-x: hidden;
-    }
-
-    /* Fallback UI for blank screen */
-    #fallback-ui {
-        display: none;
-        text-align: center;
-        padding: 2rem;
-        color: #ef4444;
-    }
-
-    /* Content wrapper for blur effect */
-    .content-wrapper {
-        transition: filter 0.3s ease;
-        min-height: 100vh;
-        margin-left: 16rem; /* Match sidebar width */
-    }
-
-    /* Apply blur to content when editing */
-    .content-wrapper.blur {
-        filter: blur(4px);
-        pointer-events: none; /* Prevent interaction with blurred content */
-    }
-
-    /* Sidebar styling */
-    .sidebar {
-        background: linear-gradient(180deg, #1e3a8a, #1e40af); /* Indigo gradient */
-        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
-        color: #ffffff;
-        width: 16rem;
-        height: 100vh; /* Full viewport height */
-        position: fixed;
-        top: 0;
-        left: 0;
-        padding: 1.5rem;
-        z-index: 10; /* Below modal but above content */
-    }
-
-    /* Main content area - Thêm overflow để hỗ trợ cuộn khi có nhiều node */
-    .main-content {
-        padding: 1.5rem;
-        min-height: 100vh;
-        overflow-x: auto; /* Cho phép cuộn ngang nếu nội dung vượt quá chiều rộng */
-        overflow-y: auto; /* Cho phép cuộn dọc nếu nội dung vượt quá chiều cao */
-    }
-
-    /* Tree node styling - Điều chỉnh margin và width để responsive tốt hơn */
-    .tree-node {
-        background-color: #2d3748;
-        margin: 0.75rem 0 0 1.25rem;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #3b82f6;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        width: calc(100% - 2.5rem); /* Đảm bảo node không vượt quá container */
-        box-sizing: border-box; /* Đảm bảo padding và border nằm trong width */
-    }
-
-    .tree-node:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-
-    .tree-node:nth-child(even) {
-        background-color: #374151;
-    }
-
-    /* Node header */
-    .node-header {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        cursor: pointer;
-        font-weight: 600;
-        color: #e5e7eb;
-    }
-
-    /* Node content */
-    .node-content {
-        padding: 0.5rem 0;
-        font-size: 0.875rem;
-        color: #9ca3af;
-    }
-
-    /* Input fields */
-    .node-input {
-        border: 1px solid #4b5563;
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-        background-color: #2d3748;
-        color: #e5e7eb;
-        width: 100%;
-        box-sizing: border-box;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .node-input:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-    }
-
-    /* Action buttons */
-    .action-button {
-        transition: background-color 0.3s, transform 0.2s;
-    }
-
-    .action-button:hover {
-        transform: scale(1.1);
-    }
-
-    /* Highlighted plus button */
-    .add-button {
-        color: #06b6d4;
-        font-size: 1.25rem;
-        transition: color 0.2s, text-shadow 0.2s;
-    }
-
-    .add-button:hover {
-        color: #0e7490;
-        text-shadow: 0 0 6px rgba(6, 182, 212, 0.5);
-    }
-
-    /* Modal overlay */
-    .modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.6);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000; /* Above sidebar and content */
-        padding: 1rem;
-    }
-
-    /* Modal content */
-    .modal-content {
-        background-color: #2d3748;
-        border-radius: 0.5rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        width: 100%;
-        max-width: 36rem; /* Wider modal */
-        min-width: 24rem;
-        max-height: 85vh;
-        overflow-y: auto;
-        padding: 1.5rem;
-        animation: scaleIn 0.3s ease-out;
-    }
-
-    /* Children container - Loại bỏ giới hạn max-height cố định để hỗ trợ số lượng lớn node con */
-    .children-container {
-        opacity: 0;
-        transform: translateY(-10px);
-        max-height: 0;
-        overflow: hidden;
-        transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out, max-height 0.5s ease-in-out;
-    }
-
-    .children-container.expanded {
-        opacity: 1;
-        transform: translateY(0);
-        max-height: none; /* Loại bỏ giới hạn chiều cao để hiển thị toàn bộ nội dung */
-        padding-top: 0.5rem;
-    }
-
-    /* Loading spinner */
-    .spinner {
-        border: 2px solid #3b82f6;
-        border-top: 2px solid transparent;
-        border-radius: 50%;
-        width: 24px;
-        height: 24px;
-        animation: spin 1s linear infinite;
-        margin: 0 auto;
-    }
-
-    /* Error message */
-    .error-message {
-        color: #ef4444;
-        text-align: center;
-        padding: 1rem;
-        background-color: #450a0a;
-        border-radius: 0.375rem;
-    }
-
-    /* Emoji reference link */
-    .emoji-link {
-        display: block;
-        background-color: #4b5563;
-        color: #ffffff;
-        text-align: center;
-        padding: 0.5rem;
-        border-radius: 0.25rem;
-        margin-top: 1rem;
-        transition: background-color 0.2s;
-    }
-
-    .emoji-link:hover {
-        background-color: #6b7280;
-    }
-
-    /* Animation keyframes */
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
-    @keyframes scaleIn {
-        from { transform: scale(0.9); }
-        to { transform: scale(1); }
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    /* Responsive adjustments - Điều chỉnh thêm cho màn hình nhỏ */
-    @media (max-width: 768px) {
-        .sidebar {
-            width: 100%;
-            height: auto;
-            position: static;
-            padding: 1rem;
+        /* Global styles for body */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #1f2937; /* Dark gray background */
+            color: #e5e7eb;
+            margin: 0;
+            overflow-x: hidden;
         }
 
+        /* Fallback UI for blank screen */
+        #fallback-ui {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: #ef4444;
+        }
+
+        /* Content wrapper for blur effect */
         .content-wrapper {
-            margin-left: 0;
+            transition: filter 0.3s ease;
+            min-height: 100vh;
+            margin-left: 16rem; /* Match sidebar width */
         }
 
+        /* Apply blur to content when editing */
+        .content-wrapper.blur {
+            filter: blur(4px);
+            pointer-events: none; /* Prevent interaction with blurred content */
+        }
+
+        /* Sidebar styling */
+        .sidebar {
+            background: linear-gradient(180deg, #1e3a8a, #1e40af); /* Indigo gradient */
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            color: #ffffff;
+            width: 16rem;
+            height: 100vh; /* Full viewport height */
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding: 1.5rem;
+            z-index: 10; /* Below modal but above content */
+        }
+
+        /* Main content area - Thêm overflow để hỗ trợ cuộn khi có nhiều node */
         .main-content {
-            padding: 1rem;
-            overflow-x: auto; /* Đảm bảo cuộn ngang trên màn hình nhỏ */
-            overflow-y: auto; /* Đảm bảo cuộn dọc trên màn hình nhỏ */
+            padding: 1.5rem;
+            min-height: 100vh;
+            overflow-x: auto; /* Cho phép cuộn ngang nếu nội dung vượt quá chiều rộng */
+            overflow-y: auto; /* Cho phép cuộn dọc nếu nội dung vượt quá chiều cao */
         }
 
-        .modal-content {
-            max-width: 95%;
-            min-width: 90%;
-            padding: 1rem;
-        }
-
+        /* Tree node styling - Điều chỉnh margin và width để responsive tốt hơn */
         .tree-node {
-            margin-left: 0.5rem;
-            width: calc(100% - 1.5rem); /* Điều chỉnh chiều rộng cho màn hình nhỏ */
+            background-color: #2d3748;
+            margin: 0.75rem 0 0 1.25rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid #3b82f6;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            width: calc(100% - 2.5rem); /* Đảm bảo node không vượt quá container */
+            box-sizing: border-box; /* Đảm bảo padding và border nằm trong width */
         }
-    }
+
+        .tree-node:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .tree-node:nth-child(even) {
+            background-color: #374151;
+        }
+
+        /* Thêm style để hỗ trợ kéo thả */
+        .tree-node.dragging {
+            opacity: 0.5; /* Giảm độ mờ khi đang kéo */
+            border: 2px dashed #3b82f6; /* Đường viền dashed để nhận biết */
+        }
+
+        .tree-node.drop-target {
+            background-color: #3b82f6; /* Màu nền khi là đích thả */
+            opacity: 0.8;
+        }
+
+        /* Node header */
+        .node-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        /* Node content */
+        .node-content {
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+
+        /* Input fields */
+        .node-input {
+            border: 1px solid #4b5563;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            background-color: #2d3748;
+            color: #e5e7eb;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .node-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Action buttons */
+        .action-button {
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .action-button:hover {
+            transform: scale(1.1);
+        }
+
+        /* Highlighted plus button */
+        .add-button {
+            color: #06b6d4;
+            font-size: 1.25rem;
+            transition: color 0.2s, text-shadow 0.2s;
+        }
+
+        .add-button:hover {
+            color: #0e7490;
+            text-shadow: 0 0 6px rgba(6, 182, 212, 0.5);
+        }
+
+        /* Modal overlay */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000; /* Above sidebar and content */
+            padding: 1rem;
+        }
+
+        /* Modal content */
+        .modal-content {
+            background-color: #2d3748;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 36rem; /* Wider modal */
+            min-width: 24rem;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 1.5rem;
+            animation: scaleIn 0.3s ease-out;
+        }
+
+        /* Children container - Loại bỏ giới hạn max-height cố định để hỗ trợ số lượng lớn node con */
+        .children-container {
+            opacity: 0;
+            transform: translateY(-10px);
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out, max-height 0.5s ease-in-out;
+        }
+
+        .children-container.expanded {
+            opacity: 1;
+            transform: translateY(0);
+            max-height: none; /* Loại bỏ giới hạn chiều cao để hiển thị toàn bộ nội dung */
+            padding-top: 0.5rem;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 2px solid #3b82f6;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        /* Error message */
+        .error-message {
+            color: #ef4444;
+            text-align: center;
+            padding: 1rem;
+            background-color: #450a0a;
+            border-radius: 0.375rem;
+        }
+
+        /* Emoji reference link */
+        .emoji-link {
+            display: block;
+            background-color: #4b5563;
+            color: #ffffff;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        .emoji-link:hover {
+            background-color: #6b7280;
+        }
+
+        /* Animation keyframes */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.9); }
+            to { transform: scale(1); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive adjustments - Điều chỉnh thêm cho màn hình nhỏ */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: static;
+                padding: 1rem;
+            }
+
+            .content-wrapper {
+                margin-left: 0;
+            }
+
+            .main-content {
+                padding: 1rem;
+                overflow-x: auto; /* Đảm bảo cuộn ngang trên màn hình nhỏ */
+                overflow-y: auto; /* Đảm bảo cuộn dọc trên màn hình nhỏ */
+            }
+
+            .modal-content {
+                max-width: 95%;
+                min-width: 90%;
+                padding: 1rem;
+            }
+
+            .tree-node {
+                margin-left: 0.5rem;
+                width: calc(100% - 1.5rem); /* Điều chỉnh chiều rộng cho màn hình nhỏ */
+            }
+        }
     </style>
 </head>
 <body>
@@ -277,39 +291,39 @@
         <p>Please check your internet connection or try refreshing the page.</p>
     </div>
     <!-- Sidebar outside content-wrapper -->
-<div class="sidebar">
-    <h1 class="text-2xl font-bold text-white mb-6">JSON Editor</h1>
-    <input
-        type="file"
-        accept=".json"
-        id="file-upload"
-        class="border border-gray-600 rounded-lg p-2 bg-gray-800 text-white w-full mb-4"
-    />
-    <button
-        id="export-button"
-        class="action-button bg-blue-600 text-white px-4 py-2 rounded-lg w-full mb-4"
-    >
-        Export JSON
-    </button>
-    <!-- Existing Emoji Reference link to Emojipedia -->
-    <a
-        href="https://emojipedia.org/"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="emoji-link"
-    >
-        Emoji Reference
-    </a>
-    <!-- New Emojis link to EmojiDB - Thêm nút tham khảo emoji liên quan đến Customer -->
-    <a
-        href="https://emojidb.org/customer-emojis?utm_source=user_search"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="emoji-link"
-    >
-        EmojisDB
-    </a>
-</div>
+    <div class="sidebar">
+        <h1 class="text-2xl font-bold text-white mb-6">JSON Editor</h1>
+        <input
+            type="file"
+            accept=".json"
+            id="file-upload"
+            class="border border-gray-600 rounded-lg p-2 bg-gray-800 text-white w-full mb-4"
+        />
+        <button
+            id="export-button"
+            class="action-button bg-blue-600 text-white px-4 py-2 rounded-lg w-full mb-4"
+        >
+            Export JSON
+        </button>
+        <!-- Existing Emoji Reference link to Emojipedia -->
+        <a
+            href="https://emojipedia.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="emoji-link"
+        >
+            Emoji Reference
+        </a>
+        <!-- New Emojis link to EmojiDB - Thêm nút tham khảo emoji liên quan đến Customer -->
+        <a
+            href="https://emojidb.org/customer-emojis?utm_source=user_search"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="emoji-link"
+        >
+            EmojisDB
+        </a>
+    </div>
     <!-- Root div for React app -->
     <div id="root"></div>
     <!-- Separate div for modals -->
@@ -330,13 +344,15 @@
         }
 
         /* TreeNode Component: Renders a single node in the JSON tree */
-        // Component này chịu trách nhiệm hiển thị một node trong cây JSON, bao gồm các nút để thêm, sửa, xóa node
+        // Component này chịu trách nhiệm hiển thị một node trong cây JSON, bao gồm các nút để thêm, sửa, xóa node và hỗ trợ kéo thả
         function TreeNode({ node, path, onUpdate, onEditToggle }) {
-            // State for node expansion, modal visibility, and editing
+            // State for node expansion, modal visibility, editing, and drag and drop
             const [isExpanded, setIsExpanded] = React.useState(false);
             const [showAddModal, setShowAddModal] = React.useState(false);
             const [showEditModal, setShowEditModal] = React.useState(false);
             const [editValues, setEditValues] = React.useState({ ...node });
+            const [isDragging, setIsDragging] = React.useState(false);
+            const [isDropTarget, setIsDropTarget] = React.useState(false);
 
             // Log rendering for debugging
             console.log('Rendering TreeNode:', node.title, path);
@@ -421,9 +437,86 @@
                 }
             };
 
+            // Drag and Drop Handlers - Xử lý kéo thả node
+            const handleDragStart = (e) => {
+                e.stopPropagation();
+                setIsDragging(true);
+                // Lưu trữ đường dẫn của node đang được kéo để sử dụng sau này
+                e.dataTransfer.setData('text/plain', JSON.stringify(path));
+                e.dataTransfer.effectAllowed = 'move';
+                console.log('Dragging started for node:', node.title, 'path:', path);
+            };
+
+            const handleDragEnd = (e) => {
+                e.stopPropagation();
+                setIsDragging(false);
+                console.log('Dragging ended for node:', node.title);
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleDragEnter = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDropTarget(true);
+                console.log('Drag entered node:', node.title);
+            };
+
+            const handleDragLeave = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDropTarget(false);
+                console.log('Drag left node:', node.title);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDropTarget(false);
+                try {
+                    // Lấy đường dẫn của node đang được kéo
+                    const draggedPath = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    // Đường dẫn đích (node hiện tại mà chuột đang thả)
+                    const targetPath = path;
+
+                    // Kiểm tra nếu kéo và thả vào cùng một node
+                    if (JSON.stringify(draggedPath) === JSON.stringify(targetPath)) {
+                        console.log('Cannot drop node onto itself');
+                        return;
+                    }
+
+                    // Kiểm tra nếu không cùng cấp (level) hoặc không cùng parent
+                    if (draggedPath.length !== targetPath.length || 
+                        (draggedPath.length > 2 && !draggedPath.slice(0, -2).every((v, i) => v === targetPath[i]))) {
+                        console.log('Can only reorder nodes within the same level and parent');
+                        return;
+                    }
+
+                    console.log('Dropped node from', draggedPath, 'to', targetPath);
+
+                    // Gọi hàm onUpdate để cập nhật vị trí node
+                    onUpdate(draggedPath, 'moveTo', targetPath);
+                } catch (error) {
+                    console.error('Error handling drop:', error);
+                }
+            };
+
             return (
                 <>
-                    <div className="tree-node">
+                    <div 
+                        className={`tree-node ${isDragging ? 'dragging' : ''} ${isDropTarget ? 'drop-target' : ''}`}
+                        draggable="true"
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                    >
                         {/* Node header */}
                         <div className="node-header" onClick={handleToggle}>
                             {(node.isFolder || node.children?.length > 0) && (
@@ -698,7 +791,7 @@
                 reader.readAsText(file);
             };
 
-            // Update JSON data - Cập nhật dữ liệu JSON khi có thay đổi (thêm, sửa, xóa node)
+            // Update JSON data - Cập nhật dữ liệu JSON khi có thay đổi (thêm, sửa, xóa node, di chuyển node)
             const handleUpdate = (path, key, value, isDelete = false) => {
                 try {
                     setJsonData((prevData) => {
@@ -718,6 +811,39 @@
                                 console.log('Setting parent isFolder to false:', current.title, path);
                                 current.isFolder = false;
                             }
+                        } else if (key === 'moveTo') {
+                            // Xử lý di chuyển node khi kéo thả
+                            const targetPath = value; // Đường dẫn đích (nơi thả node)
+                            console.log('Moving node from', path, 'to', targetPath);
+
+                            // Kiểm tra nếu không cùng cấp hoặc không cùng parent
+                            if (path.length !== targetPath.length || 
+                                (path.length > 2 && !path.slice(0, -2).every((v, i) => v === targetPath[i]))) {
+                                console.log('Can only reorder nodes within the same level and parent');
+                                return prevData; // Không thực hiện thay đổi nếu không hợp lệ
+                            }
+
+                            // Xác định parent của node nguồn và đích
+                            let parent = newData;
+                            for (let i = 0; i < path.length - 2; i += 2) {
+                                parent = parent[path[i]][path[i + 1]];
+                            }
+
+                            // Lấy chỉ số của node nguồn và đích
+                            const draggedIndex = path[path.length - 1];
+                            const targetIndex = targetPath[targetPath.length - 1];
+
+                            // Lấy node đang được kéo
+                            const draggedNode = parent.splice(draggedIndex, 1)[0];
+
+                            // Chèn node vào vị trí đích, điều chỉnh chỉ số nếu cần
+                            let adjustedTargetIndex = targetIndex;
+                            if (draggedIndex < targetIndex) {
+                                adjustedTargetIndex -= 1; // Điều chỉnh vì node nguồn đã bị xóa
+                            }
+                            parent.splice(adjustedTargetIndex, 0, draggedNode);
+
+                            console.log('Node reordered successfully', newData);
                         } else {
                             let current = newData;
                             for (let i = 0; i < path.length - 1; i += 2) {
@@ -839,6 +965,5 @@
             document.getElementById('fallback-ui').style.display = 'block';
         }
     </script>
-
-
-</body></html>
+    </body>
+</html>
